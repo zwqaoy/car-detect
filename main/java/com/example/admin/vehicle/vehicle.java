@@ -42,6 +42,7 @@ public class vehicle extends AppCompatActivity {
     private String TAG = "vehicle_detect";
     private String base64 = null;
     private String httpArg = null;
+    private String access_token = null;
     public static final String APP_ID = "10123710";
     public static final String API_KEY = "Gd9bxXsl7yyw8HWDkpnb8q0C";
     public static final String SECRET_KEY = "xi8d3x9xsMXAuLnLznWsiv0CwZATBPHI";
@@ -65,8 +66,6 @@ public class vehicle extends AppCompatActivity {
     Button.OnClickListener takePhoto = new Button.OnClickListener() {
         public void onClick(View v){
             try {
-                //拍照我们用Action为MediaStore.ACTION_IMAGE_CAPTURE，
-                //有些人使用其他的Action但我发现在有些机子中会出问题，所以优先选择这个
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
                 startActivityForResult(intent, 2);
@@ -130,16 +129,54 @@ public class vehicle extends AppCompatActivity {
         }
     }
 
+	private void get_access_token() {
+        HttpURLConnection connection=null;
+        String uri = "https://aip.baidubce.com/oauth/2.0/token?" +
+                "grant_type=client_credentials" + "&client_id=" + API_KEY + "&client_secret=" + SECRET_KEY;
+        try {
+            URL url = new URL(uri);
+            connection =(HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(8000);
+            connection.connect();
+
+            InputStream in=connection.getInputStream();
+            BufferedReader reader=new BufferedReader(new InputStreamReader(in));
+            StringBuilder response=new StringBuilder();
+
+            String line;
+            while((line=reader.readLine())!=null){
+                response.append(line);
+            }
+            content = response.toString();
+            Log.e(TAG, "get_access_token: " + content);
+
+            JSONObject jsonObject=new JSONObject(content);
+            access_token = jsonObject.getString("access_token");
+            Log.e(TAG, "get_access_token: access_token: " + access_token);
+        }  catch (Exception e) {
+            e.printStackTrace();
+            content = "网络连接超时，请点击图片重试...";
+            handler.post(runnableUi);
+        } finally{
+            if(connection!=null)
+                connection.disconnect();
+        }
+	}
+	
     private void sendRequestWithHttpURLConnection(){
         //开启线程来发起网络请求
         new Thread(new Runnable(){
             public void run() {
+                if (access_token == null)
+                    get_access_token();
                 HttpURLConnection connection=null;
                 content = "查询中...";
                 handler.post(runnableUi);
                 try {
-                    //URL url=new URL("https://aip.baidubce.com/oauth/2.0/token");
-                    URL url=new URL("https://aip.baidubce.com/rest/2.0/image-classify/v1/car?access_token=24.103c79a15fcd5f0820aaa3ec727ce8c3.2592000.1508309282.282335-10123710");
+                    String uri = "https://aip.baidubce.com/rest/2.0/image-classify/v1/car?access_token=" + access_token;
+                    URL url=new URL(uri);
                     connection =(HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("POST");
                     connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
