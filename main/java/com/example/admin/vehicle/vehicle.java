@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Locale;
 
 import android.os.Handler;
 
@@ -228,11 +229,12 @@ public class vehicle extends AppCompatActivity {
             JSONArray jsonArray=jsonObject.getJSONArray("result");
             for (int i=0; i < jsonArray.length(); i++)    {
                 JSONObject object = jsonArray.getJSONObject(i);
-                String score = object.getString("score");
+                float score1 = Float.parseFloat(object.getString("score")) * 100;
+                String score = String.format("%.2f", score1);
                 String name = object.getString("name");
-                content += " 车型: " + name + " 可信度(%): " + score + "\n";
-                handler.post(runnableUi);
+                content += "\n 车型: " + name + " 可信度: " + score + "%";
             }
+            handler.post(runnableUi);
         }
         catch (Exception e)
         {
